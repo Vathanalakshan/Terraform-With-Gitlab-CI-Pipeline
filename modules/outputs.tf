@@ -3,7 +3,8 @@ output "s3-id" {
   value       = aws_s3_bucket.myBucket.id
 }
 
-output "dydb-id" {
+output "dynamodb-id" {
   description = "ID of the dynamodb instance"
   value       = aws_dynamodb_table.myDynamo.id
 }
+
