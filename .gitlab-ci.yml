@@ -1,0 +1,64 @@
+variables:
+  TF_DIR: ${CI_PROJECT_DIR}/modules
+  TF_ADDRESS: "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/terraform/state/old-state-name"
+
+#Docker
+default:
+  image:
+    name: hashicorp/terraform:latest
+    entrypoint:
+      - /usr/bin/env
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  before_script:
+    - ls
+    - cd ${TF_DIR}
+    - export TF_PASSWORD=$TOKEN
+    - export TF_USERNAME=$TF_USERNAME
+    - terraform init -backend-config=address=${TF_ADDRESS} -backend-config=lock_address=${TF_ADDRESS}/lock -backend-config=unlock_address=${TF_ADDRESS}/lock -backend-config=username=${TF_USERNAME} -backend-config=password=${TF_PASSWORD} -backend-config=lock_method=POST -backend-config=unlock_method=DELETE -backend-config=retry_wait_min=5
+
+stages:
+  - format
+  - validate
+  - plan
+  - apply
+  - destroy
+
+terraform_format:
+  stage: format
+  script:
+    - terraform fmt -check -recursive -write=false -diff
+  tags: [terraform]    
+
+terraform_validate:
+  stage: validate
+  script:
+    - terraform validate
+  tags: [terraform]    
+
+terraform_plan:
+  stage: plan
+  script: 
+    - terraform plan
+  dependencies:
+    - terraform_validate
+    - terraform_format
+  tags: [terraform]    
+
+terraform_apply:
+  stage: apply
+  script:
+    - terraform apply --auto-approve
+    - terraform state list
+  dependencies:
+    - terraform_plan
+  tags: [terraform]    
+  when: manual
+
+terraform_destroy:
+  stage: destroy
+  script:
+    - terraform destroy -auto-approve
+  dependencies:
+    - terraform_apply
+  tags: [terraform]
+  when: manual
